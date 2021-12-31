@@ -20,7 +20,7 @@ public class MultiThreadChatServerSync {
 
   // This chat server can accept up to maxClientsCount clients' connections.
   private static final int maxClientsCount = 10;
-  private static final clientThread[] threads = new clientThread[maxClientsCount];
+  private static final ClientThread[] threads = new ClientThread[maxClientsCount];
 
   public static void main(String args[]) {
 
@@ -53,7 +53,7 @@ public class MultiThreadChatServerSync {
         int i = 0;
         for (i = 0; i < maxClientsCount; i++) {
           if (threads[i] == null) {
-            (threads[i] = new clientThread(clientSocket, threads)).start();
+            (threads[i] = new ClientThread(clientSocket, threads)).start();
             break;
           }
         }

@@ -21,27 +21,28 @@ import java.util.concurrent.TimeUnit;
  * @author mohammed
  */
 // For every client's connection we call this class -- class serrver
-public class clientThread extends Thread
+public class ClientThread extends Thread
 {
   private String clientName = null;
+  public Boolean isAccepted = null;
   private DataInputStream is = null;
   private PrintStream os = null;
   private Socket clientSocket = null;
-  private final clientThread[] threads;
+  private final ClientThread[] threads;
   private int maxClientsCount;
   private static final Map<String,Integer> listUsers = new HashMap<>() ;
   private static final Map<String,String> pairUsers = new HashMap<>() ;
   
 
-  public clientThread(Socket clientSocket, clientThread[] threads) {
+  public ClientThread(Socket clientSocket, ClientThread[] threads) {
     this.clientSocket = clientSocket;
     this.threads = threads;
     maxClientsCount = threads.length;
   }
 
-  public void run() {
+    public void run() {
     int maxClientsCount = this.maxClientsCount;
-    clientThread[] threads = this.threads;
+    ClientThread[] threads = this.threads;
     try {
       /*
        * Create input and output streams for this client.
@@ -82,8 +83,8 @@ public class clientThread extends Thread
       }
       
       /* Welcome the new the client. */
-//      os.println("Welcome " + name
-//          + " to our chat room.\nTo leave enter /quit in a new line.");
+      os.println("Welcome " + name
+          + " to our chat room.\nTo leave enter /quit in a new line.");
 
         os.println("Please waiting to match with another user...");
       synchronized (this) {
@@ -102,18 +103,28 @@ public class clientThread extends Thread
                 break;
             }
             
+            boolean isPair = false;
+            String username = "";
             for (Map.Entry<String,Integer> entry : listUsers.entrySet()){
                 System.out.println("Key = " + entry.getKey() + ", Value = " + entry.getValue());
-                String username = entry.getKey();
+                username = entry.getKey();
                 if(username.equals(name)){
                     continue;
                 }
                 Integer stt = entry.getValue();
                 if(stt == 1){
-                    pairUsers.put(name, username);
-                    entry.setValue(2);
+                    isPair = true;
                     break;
                 }
+            }
+
+            if(isPair){
+                for (Map.Entry<String,Integer> entry : listUsers.entrySet()){
+                    if(entry.getKey().equals(username)){        
+                        entry.setValue(2);
+                    }
+                }
+                pairUsers.put(name, username);
             }
             try {
                 TimeUnit.SECONDS.sleep(3);
@@ -137,70 +148,63 @@ public class clientThread extends Thread
                         username = key;
                     }
                 }
-                
-                for (int i = 0; i < threads.length; i++) {
-                  if (threads[i] != null && threads[i] != this
-                      && threads[i].clientName != null
-                      && threads[i].clientName.equals(username)) {
-//                    threads[i].os.println("You are match with <" + name + ">. Are you accept chat: y/n ?");
-                    /*
-                     * Echo this message to let the client know the private
-                     * message was sent.
-                     */
-                    this.os.println("You are match with <" + username + ">. Are you accept chat: y/n ?");
-                    break;
-                  }
-                }
+
+                this.os.println("You are match with <" + username + ">. Are you accept chat: y/n ?");
                 break;
             }
         }
         
         
-      /* Start the conversation. */
-//      while (true) {
-//        String line = is.readLine();
-//        if (line.startsWith("/quit")) {
-//            
-//          break;
-//        }
-//        /* If the message is private sent it to the given client. */
-//        if (line.startsWith("@")) {
-//            /* Chat Client vs Client */
-//          String[] words = line.split("\\s", 2);
-//          if (words.length > 1 && words[1] != null) {
-//            words[1] = words[1].trim();
-//            if (!words[1].isEmpty()) {
-//              synchronized (this) {
-//                for (int i = 0; i < maxClientsCount; i++) {
-//                  if (threads[i] != null && threads[i] != this
-//                      && threads[i].clientName != null
-//                      && threads[i].clientName.equals(words[0])) {
-//                    threads[i].os.println("<" + name + "> " + words[1]);
-//                    /*
-//                     * Echo this message to let the client know the private
-//                     * message was sent.
-//                     */
-//                    this.os.println(">" + name + "> " + words[1]);
-//                      System.out.println("<" + name + "> " + words[1]);
-//                    break;
-//                  }
-//                }
-//              }
-//            }
-//          }
-//        } else {
-//            /* Chat Group */
-//            /* The message is public, broadcast it to all other clients. */
-//            synchronized (this) {
-//              for (int i = 0; i < maxClientsCount; i++) {
-//                if (threads[i] != null && threads[i].clientName != null) {
-//                  threads[i].os.println("<" + name + "> " + line);
-//                    System.out.println("<" + name + "> " + line);
-//                }
-//              }
-//            }
-//        }
-//      }
+        while(true) {
+            String line = is.readLine();
+            if(line != ""){
+                if("y".equals(line)) {
+                    this.isAccepted = true;
+                    break;
+                } else {
+                    this.isAccepted = false;
+                    break;
+                }
+            }
+        }
+
+        boolean isFirstTime = true;
+        while(true) {
+            try {
+                TimeUnit.SECONDS.sleep(3);
+            } catch(Exception ex){
+                break;
+            }
+            synchronized (this) {
+                ClientThread thr = getThreadByClientName(name);
+                String username = getUsernameMatched(name);
+                if(this.isAccepted != null && thr.isAccepted != null){
+
+                    if(this.isAccepted == true && thr.isAccepted == true){
+                        // Start Chat
+                        this.os.println("Congratulation <" + username + "> accepted! Let's start!");
+                        while (true) {
+                            String line = is.readLine();
+                            if (line.startsWith("/quit")) {
+                              break;
+                            }
+                            thr.os.println("<" + name + "> " + line.trim());
+                        }
+                        break;
+                    } else {
+                        
+                        this.os.println("Sorry <" + username + "> is not accepted!");
+                        break;
+                    }
+                } else if(thr.isAccepted == null){
+                    if(isFirstTime){
+                        this.os.println("Please waiting <" + username + "> accepted!");
+                        isFirstTime = false;
+                    }
+                }
+            }
+        }
+
       synchronized (this) {
         for (int i = 0; i < maxClientsCount; i++) {
           if (threads[i] != null && threads[i] != this
@@ -232,4 +236,33 @@ public class clientThread extends Thread
     } catch (IOException e) {
     }
   }
+
+    public ClientThread getThreadByClientName(String name){
+        String username = getUsernameMatched(name);
+
+        for (int i = 0; i < threads.length; i++) {
+            if (threads[i] != null && threads[i] != this
+                && threads[i].clientName != null
+                && threads[i].clientName.equals(username)) {
+                return threads[i];
+            }
+        }
+        return null;
+    } 
+    
+    public String getUsernameMatched(String name){
+        String username = "";
+        for (Map.Entry<String,String> entry : pairUsers.entrySet()){
+            String key = entry.getKey();
+            String value = entry.getValue();
+            if(key.equals(name)){
+                username = value;
+            }
+            if(value.equals(name)){
+                username = key;
+            }
+        }
+
+        return username;
+    }
 }
