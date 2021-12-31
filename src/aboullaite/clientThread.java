@@ -99,37 +99,42 @@ public class ClientThread extends Thread
         /* Random User Chat */
         boolean isbreak = false;
         while (!isbreak) {
-            if(pairUsers.containsKey(name) || pairUsers.containsValue(name)){
-                break;
-            }
-            
-            boolean isPair = false;
-            String username = "";
-            for (Map.Entry<String,Integer> entry : listUsers.entrySet()){
-                System.out.println("Key = " + entry.getKey() + ", Value = " + entry.getValue());
-                username = entry.getKey();
-                if(username.equals(name)){
-                    continue;
-                }
-                Integer stt = entry.getValue();
-                if(stt == 1){
-                    isPair = true;
+            synchronized (this) {
+                if(pairUsers.containsKey(name) || pairUsers.containsValue(name)){
                     break;
                 }
-            }
 
-            if(isPair){
+                boolean isPair = false;
+                String username = "";
                 for (Map.Entry<String,Integer> entry : listUsers.entrySet()){
-                    if(entry.getKey().equals(username)){        
-                        entry.setValue(2);
+                    System.out.println("Key = " + entry.getKey() + ", Value = " + entry.getValue());
+                    username = entry.getKey();
+                    if(username.equals(name)){
+                        continue;
+                    }
+                    Integer stt = entry.getValue();
+                    if(stt == 1){
+                        isPair = true;
+                        break;
                     }
                 }
-                pairUsers.put(name, username);
-            }
-            try {
-                TimeUnit.SECONDS.sleep(3);
-            } catch(Exception ex){
-                break;
+
+                if(isPair){
+                    for (Map.Entry<String,Integer> entry : listUsers.entrySet()){
+                        if(entry.getKey().equals(username)){        
+                            entry.setValue(2);
+                        }
+                        if(entry.getKey().equals(name)){        
+                            entry.setValue(2);
+                        }
+                    }
+                    pairUsers.put(name, username);
+                }
+                try {
+                    TimeUnit.SECONDS.sleep(3);
+                } catch(Exception ex){
+                    break;
+                }
             }
 //            break;
         }
